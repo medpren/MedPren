@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mmedpren-v3-5-20260913';
+const CACHE_NAME = 'mmedpren-v3-6-20260914';
 const APP_SHELL = ['./', './index.html', './manifest.webmanifest'];
 
 self.addEventListener('install', event => {
@@ -32,5 +32,31 @@ self.addEventListener('fetch', event => {
       if (res.ok) caches.open(CACHE_NAME).then(c => c.put(req, res.clone()));
       return res;
     }))
+  );
+});
+
+self.addEventListener('push', event => {
+  let data = {};
+  try { data = event.data ? event.data.json() : {}; } catch { data = { body: event.data ? event.data.text() : '' }; }
+  const title = data.title || "M’MEDPREN";
+  const options = {
+    body: data.body || 'Nouvelle activité sur M’MEDPREN',
+    data: { url: data.url || './', entity_type: data.entity_type || null, entity_id: data.entity_id || null },
+    tag: data.entity_id ? `${data.entity_type || 'activity'}-${data.entity_id}` : 'mmedpren-activity',
+    renotify: true
+  };
+  event.waitUntil(self.registration.showNotification(title, options));
+});
+
+self.addEventListener('notificationclick', event => {
+  event.notification.close();
+  const target = event.notification.data?.url || './';
+  event.waitUntil(
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then(list => {
+      for (const client of list) {
+        if ('focus' in client) { client.navigate(target).catch(() => null); return client.focus(); }
+      }
+      return clients.openWindow ? clients.openWindow(target) : null;
+    })
   );
 });
