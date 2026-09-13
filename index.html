@@ -94,14 +94,14 @@
 @media(max-width:520px){.product-grid,.course-grid,.service-grid{grid-template-columns:1fr 1fr}.product-card h4{font-size:14px}.product-image{height:145px}.product-body{padding:12px}.price{font-size:16px}.add-cart{padding:8px 9px;font-size:10px}.hero-copy h2{font-size:37px}.hero-actions{flex-direction:column}.hero-actions .btn{width:100%}.module-card{padding:14px}.module-card small{display:none}.impact-hero h2{font-size:34px}.stats{grid-template-columns:1fr 1fr}.promo-content{max-width:88%}.top-actions .round:nth-child(2){display:none}}
 </style>
 <script>// Configuration GitHub Pages de M'MEDPREN.
-// Tant que le backend FastAPI n'est pas en ligne, laissez API_BASE vide.
-// Exemple plus tard : 'https://api.mmedpren.com/api/v1'
+// Backend FastAPI Render connecté à GitHub Pages.
+// Base API active : https://mmedpren-api-v2.onrender.com/api/v1
 window.MMEDPREN_CONFIG = {
-  API_BASE: '',
+  API_BASE: 'https://mmedpren-api-v2.onrender.com/api/v1',
   MODE: 'github-pages'
 };
 </script>
-<script>const API_BASE = (localStorage.getItem('mmedpren-api') || window.MMEDPREN_CONFIG?.API_BASE || '').replace(/\/$/, '');
+<script>const API_BASE = (window.MMEDPREN_CONFIG?.API_BASE || localStorage.getItem('mmedpren-api') || '').replace(/\/$/, '');
 const MPApi = {
   token(){ return localStorage.getItem('mmedpren-token'); },
   headers(){ const h={'Content-Type':'application/json'}; if(this.token())h.Authorization=`Bearer ${this.token()}`; return h; },
