@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mmedpren-v3-6-20260914';
+const CACHE_NAME = 'mmedpren-v3-7-20260914';
 const APP_SHELL = ['./', './index.html', './manifest.webmanifest'];
 
 self.addEventListener('install', event => {
