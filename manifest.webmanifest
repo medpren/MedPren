@@ -1,0 +1,11 @@
+{
+  "name": "M'MEDPREN — Work4Future • Mundu ku Gundi",
+  "short_name": "M'MEDPREN",
+  "description": "Marché, Work4Future, services, business et impact sur une seule plateforme.",
+  "start_url": "./index.html#home",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#F7F7F5",
+  "theme_color": "#F7934A",
+  "lang": "fr"
+}
