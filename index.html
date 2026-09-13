@@ -31,7 +31,7 @@
         <div class="search-global"><span>⌕</span><input id="globalSearch" placeholder="Rechercher produits, services, emplois…"/></div>
         <div class="top-actions">
           <button class="round" id="installBtn" title="Installer">↓</button>
-          <button class="round" id="notifBtn" title="Notifications">♢<i>2</i></button>
+          <button class="round" id="notifBtn" title="Notifications">♢<i id="notifBadge">0</i></button>
           <button class="round cart-round" id="cartBtn" title="Panier">🛒<i id="cartBadge">0</i></button>
           <button class="profile-btn" id="profileBtn">AF</button>
         </div>
@@ -59,12 +59,13 @@
   </div>
 
   <div class="assistant-panel" id="assistantPanel">
-    <div class="assistant-head"><div><span>ASSISTANT M'MEDPREN</span><b>Que cherchez-vous ?</b></div><button id="assistantClose">×</button></div>
-    <div class="assistant-body" id="assistantBody"><div class="bubble bot">Bonjour 👋 Je peux vous orienter vers un produit, un service, une formation, un emploi ou un outil Business.</div></div>
-    <div class="assistant-suggestions"><button>Je cherche un emploi</button><button>Créer une boutique</button><button>Équipements d'élevage</button></div>
-    <form class="assistant-form" id="assistantForm"><input id="assistantInput" placeholder="Écrivez votre demande…"/><button>➤</button></form>
+    <div class="assistant-head"><div><span>ASSISTANCE M'MEDPREN</span><b>Assistant intelligent</b></div><button id="assistantClose">×</button></div>
+    <div class="assistant-body" id="assistantBody"><div class="bubble bot">Bonjour 👋 Je peux vous aider à trouver un produit, commander, comprendre votre boutique ou vous orienter. En cas de litige, un service client humain peut reprendre la conversation.</div></div>
+    <div class="assistant-suggestions"><button>Trouver un produit</button><button>Suivre une commande</button><button>Problème avec un vendeur</button></div>
+    <button class="assistant-human" id="assistantHumanBtn">👤 Service client humain / Recours</button>
+    <form class="assistant-form" id="assistantForm"><input id="assistantInput" placeholder="Comment pouvons-nous vous aider ?"/><button>➤</button></form>
   </div>
-  <button class="assistant-fab" id="assistantFab" title="Assistant">✦</button>
+  <button class="assistant-fab" id="assistantFab" title="Assistance M'MEDPREN">🎧</button>
   <div class="toast" id="toast"></div>
 
   
@@ -571,8 +572,8 @@ async function openAddProduct(){
       }
       await hydrateProductsFromApi();
       if(created?.id&&created.image_url){const p=products.find(x=>String(x.id)===String(created.id));if(p)p.image_url=created.image_url}
-      $('#pMsg').innerHTML=`<span class="notice success" style="display:block">Produit publié ✓${escapeHtml(photoMessage)}</span><button class="btn secondary full" id="goMarketAfterProduct">Voir le produit dans le Marché</button>`;
-      $('#goMarketAfterProduct').onclick=()=>{closeModal();go('market')};toast('Produit publié ✓')
+      $('#pMsg').innerHTML=`<span class="notice success" style="display:block">Produit soumis à validation ✓${escapeHtml(photoMessage)}</span><button class="btn secondary full" id="goMarketAfterProduct">Retour au Marché</button>`;
+      $('#goMarketAfterProduct').onclick=()=>{closeModal();go('market')};toast('Produit soumis à validation ✓')
     }catch(e){$('#pMsg').innerHTML=`<span class="notice error" style="display:block">${escapeHtml(friendlyError(e))}</span>`;btn.disabled=false;btn.textContent='Publier'}
   }
 }
@@ -716,7 +717,7 @@ async function renderAdminSellers(){
 async function renderAdminProducts(){
   const rows=await MPApi.adminProducts();
   $('#adminPanel').innerHTML=`<div class="notice"><b>Validation des publications.</b> Les nouveaux produits et les produits modifiés restent invisibles dans le Marché jusqu’à votre approbation.</div><h3>Catalogue complet</h3>${rows.length?rows.map(p=>`<div class="admin-seller-row"><div class="row-head"><div><b>${escapeHtml(p.name)}</b><small>${escapeHtml(p.store_name||'Boutique')} • ${Number(p.price||0).toLocaleString('fr-FR')} ${escapeHtml(p.currency||'USD')} • Stock ${Number(p.stock_qty||0)}</small></div><span class="status ${moderationClass(p.moderation_status)}">${moderationLabel(p.moderation_status)}</span></div><div class="modal-actions"><button class="btn primary" data-papprove="${p.id}">✓ Approuver</button><button class="btn secondary" data-pedit="${p.id}">Modifier</button><button class="btn secondary" data-psuspend="${p.id}">Suspendre</button><button class="btn danger" data-pdelete="${p.id}">Supprimer</button></div></div>`).join(''):'<div class="empty-state">Aucun produit.</div>'}`;
-  $$('[data-papprove]').forEach(b=>b.onclick=async()=>{await MPApi.adminProductDecision(b.dataset.papprove,'approved');await hydrateProductsFromApi();toast('Produit publié ✓');openAdminCenter('products')});
+  $$('[data-papprove]').forEach(b=>b.onclick=async()=>{await MPApi.adminProductDecision(b.dataset.papprove,'approved');await hydrateProductsFromApi();toast('Produit soumis à validation ✓');openAdminCenter('products')});
   $$('[data-psuspend]').forEach(b=>b.onclick=async()=>{await MPApi.adminProductDecision(b.dataset.psuspend,'suspended');await hydrateProductsFromApi();toast('Produit suspendu');openAdminCenter('products')});
   $$('[data-pedit]').forEach(b=>b.onclick=()=>openAdminEditProduct(rows.find(p=>String(p.id)===String(b.dataset.pedit))));
   $$('[data-pdelete]').forEach(b=>b.onclick=async()=>{if(!confirm('Supprimer définitivement ce produit ?'))return;await MPApi.adminDeleteProduct(b.dataset.pdelete);await hydrateProductsFromApi();toast('Produit supprimé');openAdminCenter('products')});
@@ -747,6 +748,152 @@ async function renderAdminChats(){
 const _profileV34=profile;
 profile=function(){return _profileV34().replace('Valider, suspendre et gérer vendeurs & produits','Boutiques, produits, publicités et tous les chats')};
 render();
+</script>
+
+
+<style>
+/* ===== M'MEDPREN V3.5 : commerce, assistance, notifications, navigation ===== */
+.back-nav{width:42px;height:42px;border:1px solid var(--line);background:#fff;border-radius:13px;display:none;place-items:center;font-size:22px;font-weight:900;color:var(--ink);flex:0 0 auto}.back-nav.show{display:grid}
+.product-actions{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:12px}.product-actions .btn{padding:9px 8px;font-size:10px}.product-actions .order-now{background:linear-gradient(135deg,var(--orange),var(--orange-2));color:#fff;border:0}.product-actions .chat-now{background:#fff;border:1px solid #f2c7a8;color:#c9540e}.product-card .product-foot{margin-top:9px}
+.assistant-human{margin:0 10px 8px;border:1px solid #f1c39f;background:#fff6ef;color:#a9440d;border-radius:12px;padding:10px 12px;font-weight:850;text-align:center}.assistant-loading{opacity:.65}.assistant-product-list{display:grid;gap:6px;margin:8px 0}.assistant-product{border:1px solid var(--line);background:#fff;border-radius:12px;padding:9px;text-align:left;font-size:10px}.assistant-provider{display:block;margin-top:6px;font-size:8px;color:var(--muted)}
+.notif-list{display:grid;gap:8px}.notif-row{border:1px solid var(--line);border-radius:15px;padding:12px;background:#fff;cursor:pointer;display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:start}.notif-row.unread{border-color:#ffc79e;background:#fff9f4}.notif-dot{width:9px;height:9px;border-radius:50%;background:var(--orange);margin-top:6px}.notif-row.read .notif-dot{background:#d5d1ce}.notif-row b{display:block;color:var(--ink)}.notif-row small{display:block;color:var(--muted);margin-top:4px}.notif-time{font-size:8px;color:var(--muted);white-space:nowrap}.notif-toolbar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+.managed-ads{margin:0 0 18px}.managed-ads-head{margin-bottom:9px}.managed-ads-viewport{overflow:hidden;border-radius:24px}.managed-ads-track{display:flex;gap:0;overflow:hidden;scroll-snap-type:none;padding:0;scroll-behavior:smooth}.managed-ad{flex:0 0 100%;min-height:260px;display:grid;grid-template-columns:minmax(0,1.15fr) minmax(250px,.85fr);background:#1f1b18;scroll-snap-align:none;border-radius:24px}.managed-ad-media{position:relative;min-height:260px;overflow:hidden;background:#2c2723}.managed-ad-media .ad-bg{position:absolute;inset:-20px;width:calc(100% + 40px);height:calc(100% + 40px);object-fit:cover;filter:blur(22px);opacity:.45;transform:scale(1.08)}.managed-ad-media .ad-main{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;z-index:1}.managed-ad:after{display:none}.managed-ad-copy{max-width:none;display:flex;flex-direction:column;justify-content:center;padding:28px;position:relative;z-index:2}.managed-ad-copy h3{font-size:clamp(24px,4vw,38px);line-height:1.05}.managed-ad-copy p{font-size:14px}.managed-ad-dots{display:flex;justify-content:center;gap:6px;margin-top:9px}.managed-ad-dot{width:7px;height:7px;border-radius:99px;border:0;background:#d8d2cd;padding:0}.managed-ad-dot.active{width:23px;background:var(--orange)}
+.ad-format-note{background:#fff8f2;border:1px solid #ffdfc7;border-radius:13px;padding:10px;font-size:10px;color:#6f5a4a;margin:8px 0}.ad-preview-frame{height:220px;border:1px dashed #e3b994;border-radius:16px;background:#faf7f4;overflow:hidden;position:relative}.ad-preview-frame img{width:100%;height:100%;object-fit:contain;background:#eee}
+@media(max-width:860px){.back-nav{width:40px;height:40px}.managed-ad{grid-template-columns:1fr;min-height:0}.managed-ad-media{min-height:230px}.managed-ad-copy{padding:20px}.managed-ad-copy h3{font-size:28px}.topbar{gap:8px}}
+@media(max-width:520px){.product-actions{grid-template-columns:1fr 1fr}.product-actions .btn{font-size:9px;padding:8px 5px}.managed-ad-media{min-height:205px}.managed-ad-copy{padding:17px}.managed-ad-copy h3{font-size:24px}}
+</style>
+<script>
+/* ===== M'MEDPREN V3.5 ===== */
+Object.assign(MPApi,{
+  notifications(unreadOnly=false){return this.request(`/notifications${unreadOnly?'?unread_only=true':''}`)},
+  notificationCount(){return this.request('/notifications/unread-count')},
+  readNotification(id){return this.request(`/notifications/${id}/read`,{method:'PATCH'})},
+  readAllNotifications(){return this.request('/notifications/read-all',{method:'POST'})},
+  startSupportChat(subject='Service client M’MEDPREN'){return this.request('/chats/support',{method:'POST',body:JSON.stringify({subject})})},
+  assistantMessage(message,current_view=current){return this.request('/assistant/message',{method:'POST',body:JSON.stringify({message,current_view})})}
+});
+
+let viewHistory=[];
+let managedAdTimer=null;
+let lastUnreadCount=0;
+let notificationTimer=null;
+
+function ensureBackButton(){
+  if($('#backNavBtn'))return;
+  const btn=document.createElement('button');btn.id='backNavBtn';btn.className='back-nav';btn.type='button';btn.setAttribute('aria-label','Retour');btn.textContent='←';
+  const title=$('.top-title');title?.insertAdjacentElement('beforebegin',btn);btn.onclick=navigateBack;updateBackButton();
+}
+function updateBackButton(){const b=$('#backNavBtn');if(!b)return;b.classList.toggle('show',current!=='home'||$('#genericModal')?.classList.contains('show'))}
+function navigateBack(){
+  if($('#genericModal')?.classList.contains('show')){closeModal();updateBackButton();return}
+  const prev=viewHistory.pop();
+  if(prev&&prev!==current){current=prev;localStorage.setItem('mmedpren-view',current);closeSidebar();renderNav();render();window.scrollTo({top:0,behavior:'smooth'})}
+  else if(current!=='home'){current='home';localStorage.setItem('mmedpren-view','home');renderNav();render();window.scrollTo({top:0,behavior:'smooth'})}
+  updateBackButton();
+}
+const _goV35=go;
+go=function(id){if(id!==current)viewHistory.push(current);_goV35(id);updateBackButton()};
+const _modalV35=modal;modal=function(html){_modalV35(html);updateBackButton()};
+const _closeModalV35=closeModal;closeModal=function(){_closeModalV35();updateBackButton()};
+
+productCards=function(list=products){
+  if(!list.length)return `<div class="panel"><b>Aucun produit trouvé.</b><p class="muted">Essayez une autre recherche ou catégorie.</p></div>`;
+  return `<div class="product-grid">${list.map(p=>{const fav=isFavorite(p.id);return `<article class="product-card">
+    <div class="product-image"><img src="${productImage(p)}" alt="${escapeHtml(p.name)}"><span class="product-badge">${escapeHtml(p.category||'Produit')}</span><button class="favorite ${fav?'active':''}" data-favorite="${p.id}" aria-label="${fav?'Retirer des favoris':'Ajouter aux favoris'}">${fav?'♥':'♡'}</button></div>
+    <div class="product-body"><div class="product-meta"><small>${escapeHtml(p.category||'Marché')}</small><span class="rating"><strong>★</strong> 4,8</span></div><h4>${escapeHtml(p.name)}</h4>
+    <div class="seller-name"><span>●</span> ${escapeHtml(sellerName(p))} • vendeur vérifié</div>
+    <div class="product-foot"><span class="price">${money(p)}</span><button class="add-cart" data-buy="${p.id}">+ Panier</button></div>
+    <div class="product-actions"><button class="btn order-now" data-order-now="${p.id}">Commander</button>${p.seller_id?`<button class="btn chat-now" data-chat-product="${p.id}">💬 Discuter</button>`:'<button class="btn chat-now" disabled>💬 Discuter</button>'}</div></div>
+  </article>`}).join('')}</div>`
+};
+function orderProductNow(id){const p=findProduct(id);if(!p)return;const existing=cart.find(i=>String(i.id)===String(id));if(existing)existing.qty++;else cart.push({...p,qty:1});saveCart();openCheckout()}
+bindProductCardActions=function(){
+  $$('[data-buy]').forEach(b=>b.onclick=e=>{e.stopPropagation();addToCart(b.dataset.buy)});
+  $$('[data-order-now]').forEach(b=>b.onclick=e=>{e.stopPropagation();orderProductNow(b.dataset.orderNow)});
+  $$('[data-chat-product]').forEach(b=>b.onclick=e=>{e.stopPropagation();const p=findProduct(b.dataset.chatProduct);if(p?.seller_id)openCustomerSellerChat(p.seller_id,p.name)});
+  $$('[data-favorite]').forEach(b=>b.onclick=e=>{e.stopPropagation();toggleFavorite(b.dataset.favorite);b.classList.toggle('active',isFavorite(b.dataset.favorite));b.textContent=isFavorite(b.dataset.favorite)?'♥':'♡'});
+  $$('.product-card .product-image img').forEach(img=>img.onclick=()=>{const card=img.closest('.product-card');const btn=card.querySelector('[data-buy]');if(btn)showProduct(btn.dataset.buy)});
+};
+showProduct=function(id){
+  const p=findProduct(id);if(!p)return;
+  modal(`<div class="product-image" style="height:280px;border-radius:18px"><img src="${productImage(p)}" alt="${escapeHtml(p.name)}"></div><span class="eyebrow" style="display:block;margin-top:16px">${escapeHtml(p.category)}</span><h2>${escapeHtml(p.name)}</h2><div class="rating"><strong>★</strong> 4,8 • M’MEDPREN</div><p class="muted">${escapeHtml(p.description||'Produit proposé sur M’MEDPREN.')}</p><div class="list-row"><div class="list-ico">✓</div><div><b>${escapeHtml(sellerName(p))}</b><small>Vendeur validé • Marketplace</small></div><span class="status approved">Vérifié</span></div><div class="section-head" style="margin-top:16px"><h3>${money(p)}</h3><span class="muted">Stock : ${p.stock_qty??'—'}</span></div><div class="product-actions"><button class="btn primary" id="detailOrder">Commander</button>${p.seller_id?'<button class="btn secondary" id="detailChat">💬 Discuter</button>':''}</div><button class="btn outline full" id="detailAdd" style="margin-top:8px">Ajouter au panier</button>`);
+  $('#detailOrder').onclick=()=>orderProductNow(id);$('#detailAdd').onclick=()=>{addToCart(id);closeModal()};if($('#detailChat'))$('#detailChat').onclick=()=>openCustomerSellerChat(p.seller_id,p.name);
+};
+
+mountManagedAds=async function(){
+  if(current!=='home')return;const view=$('#view');if(!view)return;clearInterval(managedAdTimer);
+  let host=$('#managedAdsHost');const hero=view.querySelector('.hero');
+  if(!host){host=document.createElement('section');host.id='managedAdsHost';host.className='managed-ads'}
+  if(hero)hero.insertAdjacentElement('beforebegin',host);else view.prepend(host);
+  try{
+    const rows=await MPApi.ads();if(!Array.isArray(rows)||!rows.length){host.remove();return}
+    host.innerHTML=`<div class="managed-ads-head"><div><span class="eyebrow">À la une</span><h3 style="margin:3px 0">M’MEDPREN recommande</h3></div>${hasRole('admin')?'<button class="link-btn" id="manageAdsInline">Gérer les publicités</button>':''}</div><div class="managed-ads-viewport"><div class="managed-ads-track" id="managedAdsTrack">${rows.map(a=>`<article class="managed-ad">${a.image_url?`<div class="managed-ad-media"><img class="ad-bg" src="${escapeHtml(a.image_url)}" alt=""><img class="ad-main" src="${escapeHtml(a.image_url)}" alt="${escapeHtml(a.title)}"></div>`:'<div class="managed-ad-media"></div>'}<div class="managed-ad-copy"><span class="eyebrow" style="color:#ffc28f">Publicité M’MEDPREN</span><h3>${escapeHtml(a.title)}</h3>${a.body?`<p>${escapeHtml(a.body)}</p>`:''}${a.link_url?`<a class="btn" target="_blank" rel="noopener" href="${escapeHtml(safeAdHref(a.link_url))}">Découvrir →</a>`:''}</div></article>`).join('')}</div></div>${rows.length>1?`<div class="managed-ad-dots">${rows.map((_,i)=>`<button class="managed-ad-dot ${i===0?'active':''}" data-ad-dot="${i}"></button>`).join('')}</div>`:''}`;
+    if($('#manageAdsInline'))$('#manageAdsInline').onclick=()=>openAdminCenter('ads');
+    const track=$('#managedAdsTrack'),cards=[...track.children],dots=$$('[data-ad-dot]');let idx=0;
+    const show=i=>{idx=(i+cards.length)%cards.length;track.scrollTo({left:track.clientWidth*idx,behavior:'smooth'});dots.forEach((d,n)=>d.classList.toggle('active',n===idx))};
+    dots.forEach(d=>d.onclick=()=>show(Number(d.dataset.adDot)));if(cards.length>1)managedAdTimer=setInterval(()=>show(idx+1),4800);
+  }catch(e){host.remove()}
+};
+
+openAdEditor=function(ad=null){
+  modal(`<span class="eyebrow">Publicités M’MEDPREN</span><h2>${ad?'Modifier':'Créer'} une publicité</h2><label>Titre<input id="adTitle" value="${escapeHtml(ad?.title||'')}"></label><label>Description / message<textarea id="adBody">${escapeHtml(ad?.body||'')}</textarea></label><label>Lien (optionnel)<input id="adLink" value="${escapeHtml(ad?.link_url||'')}" placeholder="https://..."></label><label>Ordre d’affichage<input id="adOrder" type="number" value="${Number(ad?.sort_order||0)}"></label><div class="ad-format-note"><b>Format libre.</b> Photo portrait, paysage ou carrée : la bannière s’adapte automatiquement sans couper l’essentiel de l’image.</div><div class="upload-zone"><b>Image de la publicité</b><input id="adImage" type="file" accept="image/*"><div class="ad-preview-frame"><img id="adPreview" style="${ad?.image_url?'display:block':'display:none'}" src="${escapeHtml(ad?.image_url||'')}"></div></div><label style="display:flex;gap:8px;align-items:center"><input id="adActive" type="checkbox" ${ad?.is_active===false?'':'checked'} style="width:auto"> Publicité active</label><button class="btn primary full" id="adSave">Enregistrer</button><button class="btn secondary full" id="adBack" style="margin-top:8px">Retour</button><p id="adMsg"></p>`);
+  let selected='';$('#adImage').onchange=async e=>{const f=e.target.files?.[0];if(!f)return;try{selected=await compressImage(f,1800,.86);$('#adPreview').src=selected;$('#adPreview').style.display='block'}catch(err){$('#adMsg').textContent=friendlyError(err)}};$('#adBack').onclick=()=>openAdminCenter('ads');$('#adSave').onclick=async()=>{const body={title:$('#adTitle').value.trim(),body:$('#adBody').value.trim()||null,link_url:$('#adLink').value.trim()||null,is_active:$('#adActive').checked,sort_order:Number($('#adOrder').value||0)};if(body.title.length<2)return $('#adMsg').textContent='Ajoutez un titre.';const b=$('#adSave');b.disabled=true;try{let saved=ad?await MPApi.adminUpdateAd(ad.id,body):await MPApi.adminCreateAd(body);if(selected){b.textContent='Envoi image…';saved=await MPApi.adminUploadAdImage(saved.id,dataUrlToBlob(selected),'publicite.jpg')}toast('Publicité enregistrée ✓');openAdminCenter('ads');if(current==='home')setTimeout(mountManagedAds,0)}catch(e){$('#adMsg').textContent=friendlyError(e);b.disabled=false;b.textContent='Enregistrer'}};
+};
+
+async function openHumanSupport(subject='Service client M’MEDPREN'){
+  if(!MPApi.token()){toast('Connectez-vous pour contacter le service client.');return openLogin()}
+  try{const c=await MPApi.startSupportChat(subject);$('#assistantPanel')?.classList.remove('show');openConversation(c.id,'Service client M’MEDPREN')}catch(e){toast(friendlyError(e))}
+}
+async function askSmartAssistant(text){
+  const body=$('#assistantBody');if(!body)return;body.insertAdjacentHTML('beforeend',`<div class="bubble user">${escapeHtml(text)}</div><div class="bubble bot assistant-loading" id="assistantThinking">Recherche…</div>`);body.scrollTop=body.scrollHeight;
+  let result;
+  try{result=await MPApi.assistantMessage(text,current)}catch(e){const fallback=assistantReply(text);result={answer:fallback.text,intent:'fallback',products:[],provider:'local'}}
+  $('#assistantThinking')?.remove();let extra='';
+  if(Array.isArray(result.products)&&result.products.length)extra=`<div class="assistant-product-list">${result.products.map(p=>`<button class="assistant-product" data-assistant-product="${p.id}"><b>${escapeHtml(p.name)}</b><br>${Number(p.price).toLocaleString('fr-FR')} ${escapeHtml(p.currency||'USD')}</button>`).join('')}</div>`;
+  body.insertAdjacentHTML('beforeend',`<div class="bubble bot">${escapeHtml(result.answer||'Je peux vous aider.')} ${extra}<small class="assistant-provider">Assistance ${result.provider==='gemini'?'IA générative':'intelligente M’MEDPREN'}</small></div>`);body.scrollTop=body.scrollHeight;
+  $$('[data-assistant-product]').forEach(b=>b.onclick=()=>{const p=findProduct(b.dataset.assistantProduct);$('#assistantPanel').classList.remove('show');if(p)showProduct(p.id);else{go('market');setTimeout(()=>filterMarket(b.textContent.trim()),80)}});
+  if(result.intent==='support')toast('Le service client humain est disponible juste sous la conversation.');
+}
+function initAssistantV35(){
+  $('#assistantFab').textContent='🎧';$('#assistantFab').title='Assistance M’MEDPREN';
+  $('#assistantHumanBtn').onclick=()=>openHumanSupport('Recours / assistance après échange avec l’assistant');
+  $$('.assistant-suggestions button').forEach(b=>b.onclick=()=>{$('#assistantInput').value=b.textContent;$('#assistantInput').focus()});
+  $('#assistantForm').onsubmit=async e=>{e.preventDefault();const v=$('#assistantInput').value.trim();if(!v)return;$('#assistantInput').value='';await askSmartAssistant(v)};
+}
+
+function notificationIcon(kind){if(/order/.test(kind))return '🛒';if(/chat|message|support/.test(kind))return '💬';if(/product/.test(kind))return '📦';if(/seller/.test(kind))return '🏪';return '🔔'}
+async function refreshNotificationCount(showAlert=false){
+  if(!MPApi.token()){const badge=$('#notifBadge');if(badge)badge.style.display='none';lastUnreadCount=0;return}
+  try{const d=await MPApi.notificationCount(),count=Number(d.count||0),badge=$('#notifBadge');if(badge){badge.textContent=count>99?'99+':count;badge.style.display=count?'grid':'none'}
+    if(showAlert&&count>lastUnreadCount&&lastUnreadCount>=0){const rows=await MPApi.notifications(true);const n=rows[0];if(n){toast(n.title);if('Notification'in window&&Notification.permission==='granted')new Notification(n.title,{body:n.body||'Nouvelle activité M’MEDPREN'})}}
+    lastUnreadCount=count;
+  }catch(e){console.info('Notifications indisponibles',e.message)}
+}
+openNotifications=async function(){
+  if(!MPApi.token())return openLogin();
+  modal(`<span class="eyebrow">Notifications</span><h2>Centre d’activité</h2><div class="notif-toolbar"><button class="btn secondary" id="notifReadAll">Tout marquer comme lu</button>${'Notification'in window&&Notification.permission!=='granted'?'<button class="btn secondary" id="notifDevice">Activer alertes appareil</button>':''}</div><div id="notifRows"><p class="muted">Chargement…</p></div>`);
+  try{const rows=await MPApi.notifications();$('#notifRows').innerHTML=rows.length?`<div class="notif-list">${rows.map(n=>`<div class="notif-row ${n.is_read?'read':'unread'}" data-notification="${n.id}" data-entity-type="${escapeHtml(n.entity_type||'')}" data-entity-id="${escapeHtml(n.entity_id||'')}"><span class="notif-dot"></span><div><b>${notificationIcon(n.kind)} ${escapeHtml(n.title)}</b><small>${escapeHtml(n.body||'')}</small></div><span class="notif-time">${new Date(n.created_at).toLocaleString('fr-FR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})}</span></div>`).join('')}</div>`:'<div class="empty-state">Aucune notification pour le moment.</div>';
+    $$('[data-notification]').forEach(row=>row.onclick=async()=>{await MPApi.readNotification(row.dataset.notification).catch(()=>{});const type=row.dataset.entityType,id=row.dataset.entityId;await refreshNotificationCount();if(type==='conversation'&&id)return openConversation(id,'Conversation');if(type==='product'&&hasRole('admin'))return openAdminCenter('products');if(type==='seller'&&hasRole('admin'))return openAdminCenter('sellers');if(type==='order'&&!hasRole('seller'))return openOrders();row.classList.remove('unread');row.classList.add('read')});
+  }catch(e){$('#notifRows').innerHTML=`<div class="notice error">${escapeHtml(friendlyError(e))}</div>`}
+  $('#notifReadAll').onclick=async()=>{await MPApi.readAllNotifications();await refreshNotificationCount();openNotifications()};
+  if($('#notifDevice'))$('#notifDevice').onclick=async()=>{const p=await Notification.requestPermission();toast(p==='granted'?'Alertes appareil activées ✓':'Autorisation non accordée');openNotifications()};
+};
+function initNotificationsV35(){
+  $('#notifBtn').onclick=openNotifications;refreshNotificationCount(false);clearInterval(notificationTimer);notificationTimer=setInterval(()=>{if(document.visibilityState==='visible')refreshNotificationCount(true)},45000);document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')refreshNotificationCount(true)},{passive:true});
+}
+
+// support label in admin chat supervision
+const _renderAdminChatsV35=renderAdminChats;
+renderAdminChats=async function(){
+  const rows=await MPApi.adminChats();
+  $('#adminPanel').innerHTML=`<div class="notice"><b>Supervision messagerie.</b> L’administrateur voit les chats client ↔ vendeur, administration ↔ vendeur et les recours au service client humain.</div>${rows.length?`<div class="chat-list" style="margin-top:12px">${rows.map(c=>{const label=c.kind==='support'?`Service client ↔ ${c.customer_name||'Utilisateur'}`:c.kind==='admin_seller'?`Administration ↔ ${c.seller_name}`:`${c.customer_name||'Client'} ↔ ${c.seller_name}`;return `<div class="chat-row" data-admin-conv="${c.id}"><div class="row-head"><div><b>${escapeHtml(label)}</b><small>${escapeHtml(c.last_message||c.subject||'Aucun message')}</small></div><span class="status ${c.kind==='support'?'suspended':c.kind==='admin_seller'?'approved':'pending'}">${c.kind==='support'?'Support':c.kind==='admin_seller'?'Admin':'Client'}</span></div></div>`}).join('')}</div>`:'<div class="empty-state">Aucun chat.</div>'}`;$$('[data-admin-conv]').forEach(b=>b.onclick=()=>openConversation(b.dataset.adminConv,b.querySelector('b')?.textContent||'Conversation'));
+};
+
+const _hydrateUserV35=hydrateUser;
+hydrateUser=async function(){await _hydrateUserV35();setTimeout(()=>refreshNotificationCount(false),0)};
+
+function initV35(){ensureBackButton();initAssistantV35();initNotificationsV35();updateBackButton();if(current==='home')setTimeout(mountManagedAds,40)}
+initV35();
 </script>
 
 </body>
