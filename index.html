@@ -591,5 +591,163 @@ if('serviceWorker'in navigator)window.addEventListener('load',()=>navigator.serv
 (async()=>{renderNav();updateCartBadge();await hydrateUser();render();hydrateProductsFromApi()})();
 </script>
 
+<style>
+/* ===== M'MEDPREN V3.4 ===== */
+.managed-ads{margin:18px 0 26px}.managed-ads-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}.managed-ads-track{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(300px,1fr);gap:12px;overflow-x:auto;scroll-snap-type:x mandatory;padding-bottom:4px}.managed-ad{min-height:190px;border-radius:22px;overflow:hidden;position:relative;background:linear-gradient(135deg,#1f1b18,#4d2c18);color:#fff;scroll-snap-align:start;border:1px solid rgba(255,255,255,.12)}.managed-ad img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}.managed-ad:after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,rgba(20,12,8,.82),rgba(20,12,8,.28))}.managed-ad-copy{position:relative;z-index:2;padding:22px;max-width:72%}.managed-ad-copy h3{margin:5px 0 8px;font-size:24px}.managed-ad-copy p{margin:0 0 13px;color:#f7eee8}.managed-ad-copy .btn{background:#fff;color:#d65c12;border:0}.admin-tabs{display:flex;gap:7px;overflow-x:auto;padding:2px 0 14px}.admin-tabs .btn{white-space:nowrap;padding:9px 12px}.admin-tabs .btn.active{background:var(--orange);color:#fff;border-color:var(--orange)}.admin-seller-row{border:1px solid var(--line);border-radius:17px;padding:14px;margin:10px 0;background:#fff}.row-head{display:flex;gap:10px;align-items:flex-start;justify-content:space-between}.row-head small{display:block;color:var(--muted);margin-top:4px}.modal-actions{display:flex;flex-wrap:wrap;gap:7px;margin-top:10px}.modal-actions .btn{padding:9px 11px;font-size:11px}.btn.danger{background:#fff1f0;color:#b42318;border:1px solid #fecaca}.status.pending{background:#fff8dd;color:#8a6600}.status.approved{background:#eaf8ef;color:#19703a}.status.suspended{background:#fff0ef;color:#a72d25}.chat-list{display:grid;gap:8px}.chat-row{border:1px solid var(--line);border-radius:15px;padding:13px;background:#fff;cursor:pointer}.chat-row:hover{border-color:#f2b78f}.chat-messages{height:min(48vh,430px);overflow:auto;background:#faf8f6;border:1px solid var(--line);border-radius:16px;padding:12px;display:flex;flex-direction:column;gap:9px}.chat-bubble{max-width:82%;padding:10px 12px;border-radius:15px;background:#fff;border:1px solid var(--line)}.chat-bubble.mine{margin-left:auto;background:#fff0e4;border-color:#ffd7b9}.chat-bubble small{display:block;color:var(--muted);font-size:9px;margin-top:5px}.chat-compose{display:grid;grid-template-columns:1fr auto;gap:8px;margin-top:10px}.chat-compose textarea{min-height:52px;margin:0}.seller-products{display:grid;gap:8px;margin-top:14px}.seller-product-row{border:1px solid var(--line);border-radius:15px;padding:12px;background:#fff}.seller-product-row .row-head b{display:block}.owner-badge{display:inline-flex;align-items:center;gap:5px;background:#fff2e7;color:var(--orange-2);border-radius:99px;padding:5px 8px;font-size:9px;font-weight:900;margin-top:6px}.admin-quick-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin:12px 0}.ad-thumb{width:74px;height:50px;object-fit:cover;border-radius:10px;background:#f5f1ee}.empty-state{padding:20px;border:1px dashed var(--line);border-radius:16px;text-align:center;color:var(--muted)}
+@media(max-width:640px){.managed-ads-track{grid-auto-columns:88%}.managed-ad-copy{max-width:88%}.admin-quick-grid{grid-template-columns:1fr}.chat-compose{grid-template-columns:1fr}.chat-compose .btn{width:100%}}
+</style>
+<script>
+/* ===== M'MEDPREN V3.4: owner shop + moderation + managed ads + persistent chats ===== */
+Object.assign(MPApi,{
+  adminUpdateProduct(id,body){return this.request(`/admin/products/${id}/profile`,{method:'PATCH',body:JSON.stringify(body)})},
+  ads(){return this.request('/ads')},
+  adminAds(){return this.request('/admin/ads')},
+  adminCreateAd(body){return this.request('/admin/ads',{method:'POST',body:JSON.stringify(body)})},
+  adminUpdateAd(id,body){return this.request(`/admin/ads/${id}`,{method:'PATCH',body:JSON.stringify(body)})},
+  adminDeleteAd(id){return this.request(`/admin/ads/${id}`,{method:'DELETE'})},
+  adminUploadAdImage(id,blob,filename='publicite.jpg'){const form=new FormData();form.append('file',blob,filename);return this.request(`/admin/ads/${id}/image`,{method:'POST',body:form})},
+  chats(){return this.request('/chats')},
+  adminChats(){return this.request('/admin/chats')},
+  startCustomerSellerChat(seller_id,subject=''){return this.request('/chats/customer-seller',{method:'POST',body:JSON.stringify({seller_id,subject})})},
+  startAdminSellerChat(seller_id,subject='Administration'){return this.request('/chats/admin-seller',{method:'POST',body:JSON.stringify({seller_id,subject})})},
+  chatMessages(id){return this.request(`/chats/${id}/messages`)},
+  sendChatMessage(id,body){return this.request(`/chats/${id}/messages`,{method:'POST',body:JSON.stringify({body})})}
+});
+
+function moderationLabel(s){s=String(s||'pending').toLowerCase();return s==='approved'?'Approuvé':s==='suspended'?'Suspendu':'En attente de validation'}
+function moderationClass(s){s=String(s||'pending').toLowerCase();return s==='approved'?'approved':s==='suspended'?'suspended':'pending'}
+function safeAdHref(url){const v=String(url||'').trim();return /^https?:\/\//i.test(v)?v:'#'}
+
+const _renderBeforeV34=render;
+render=function(){_renderBeforeV34();if(current==='home')setTimeout(mountManagedAds,0)};
+
+async function mountManagedAds(){
+  if(current!=='home')return;
+  const view=$('#view'); if(!view)return;
+  let host=$('#managedAdsHost');
+  if(!host){host=document.createElement('section');host.id='managedAdsHost';host.className='managed-ads';const hero=view.querySelector('.hero');if(hero)hero.insertAdjacentElement('afterend',host);else view.prepend(host)}
+  try{
+    const rows=await MPApi.ads();
+    if(!Array.isArray(rows)||!rows.length){host.remove();return}
+    host.innerHTML=`<div class="managed-ads-head"><div><span class="eyebrow">À la une</span><h3 style="margin:3px 0">M’MEDPREN recommande</h3></div>${hasRole('admin')?'<button class="link-btn" id="manageAdsInline">Gérer les publicités</button>':''}</div><div class="managed-ads-track">${rows.map(a=>`<article class="managed-ad">${a.image_url?`<img src="${escapeHtml(a.image_url)}" alt="${escapeHtml(a.title)}">`:''}<div class="managed-ad-copy"><span class="eyebrow">Publicité M’MEDPREN</span><h3>${escapeHtml(a.title)}</h3>${a.body?`<p>${escapeHtml(a.body)}</p>`:''}${a.link_url?`<a class="btn" target="_blank" rel="noopener" href="${escapeHtml(safeAdHref(a.link_url))}">Découvrir →</a>`:''}</div></article>`).join('')}</div>`;
+    if($('#manageAdsInline'))$('#manageAdsInline').onclick=()=>openAdminCenter('ads');
+  }catch(e){host.remove()}
+}
+
+showProduct=function(id){
+  const p=findProduct(id);if(!p)return;
+  modal(`<div class="product-image" style="height:280px;border-radius:18px"><img src="${productImage(p)}" alt="${escapeHtml(p.name)}"></div><span class="eyebrow" style="display:block;margin-top:16px">${escapeHtml(p.category)}</span><h2>${escapeHtml(p.name)}</h2><div class="rating"><strong>★</strong> 4,8 • M’MEDPREN</div><p class="muted">${escapeHtml(p.description||'Produit proposé sur M’MEDPREN.')}</p><div class="list-row"><div class="list-ico">✓</div><div><b>${escapeHtml(sellerName(p))}</b><small>Vendeur validé • Marketplace</small></div><span class="status approved">Vérifié</span></div><div class="section-head" style="margin-top:16px"><h3>${money(p)}</h3><span class="muted">Stock : ${p.stock_qty??'—'}</span></div><button class="btn primary full" id="detailAdd">Ajouter au panier</button><button class="btn outline full" id="detailBuy" style="margin-top:8px">Acheter maintenant</button>${p.seller_id?`<button class="btn secondary full" id="detailChat" style="margin-top:8px">💬 Discuter avec le vendeur</button>`:''}`);
+  $('#detailAdd').onclick=()=>{addToCart(id);closeModal()};$('#detailBuy').onclick=()=>{addToCart(id);openCart()};
+  if($('#detailChat'))$('#detailChat').onclick=()=>openCustomerSellerChat(p.seller_id,p.name);
+};
+
+async function openCustomerSellerChat(sellerId,subject=''){
+  if(!MPApi.token())return openLogin();
+  try{const c=await MPApi.startCustomerSellerChat(sellerId,subject);openConversation(c.id,c.seller_name||'Vendeur M’MEDPREN')}catch(e){toast(friendlyError(e))}
+}
+async function openAdminSellerChat(sellerId,sellerName='Vendeur'){
+  try{const c=await MPApi.startAdminSellerChat(sellerId,'Administration M’MEDPREN');openConversation(c.id,sellerName)}catch(e){toast(friendlyError(e))}
+}
+async function openConversation(id,title='Conversation'){
+  if(!MPApi.token())return openLogin();
+  modal(`<span class="eyebrow">Messagerie M’MEDPREN</span><h2>${escapeHtml(title)}</h2><div id="chatMessages" class="chat-messages"><p class="muted">Chargement…</p></div><div class="chat-compose"><textarea id="chatText" placeholder="Écrire un message…"></textarea><button class="btn primary" id="chatSend">Envoyer</button></div><button class="btn secondary full" id="chatRefresh" style="margin-top:8px">Actualiser la conversation</button><p id="chatMsg"></p>`);
+  const load=async()=>{try{const rows=await MPApi.chatMessages(id);const box=$('#chatMessages');if(!box)return;box.innerHTML=rows.length?rows.map(m=>{const mine=String(m.sender_id||'')===String(apiUser?.id||'');return `<div class="chat-bubble ${mine?'mine':''}"><b>${m.sender_role==='admin'?'Administration':m.sender_role==='seller'?'Vendeur':'Client'}</b><div>${escapeHtml(m.body)}</div><small>${new Date(m.created_at).toLocaleString('fr-FR')}</small></div>`}).join(''):'<div class="empty-state">Aucun message. Commencez la conversation.</div>';box.scrollTop=box.scrollHeight}catch(e){if($('#chatMsg'))$('#chatMsg').textContent=friendlyError(e)}};
+  await load();
+  $('#chatRefresh').onclick=load;
+  $('#chatSend').onclick=async()=>{const text=$('#chatText').value.trim();if(!text)return;const b=$('#chatSend');b.disabled=true;try{await MPApi.sendChatMessage(id,text);$('#chatText').value='';await load()}catch(e){$('#chatMsg').textContent=friendlyError(e)}finally{b.disabled=false}};
+}
+async function openChatInbox(adminMode=false){
+  if(!MPApi.token())return openLogin();
+  modal(`<span class="eyebrow">Messagerie</span><h2>${adminMode?'Tous les chats de la plateforme':'Mes conversations'}</h2><div id="chatInbox"><p class="muted">Chargement…</p></div>`);
+  try{const rows=await (adminMode?MPApi.adminChats():MPApi.chats());$('#chatInbox').innerHTML=rows.length?`<div class="chat-list">${rows.map(c=>`<div class="chat-row" data-conversation="${c.id}"><div class="row-head"><div><b>${escapeHtml(c.kind==='admin_seller'?`Administration ↔ ${c.seller_name}`:`${c.customer_name||'Client'} ↔ ${c.seller_name}`)}</b><small>${escapeHtml(c.subject||'Conversation')} • ${c.last_message?escapeHtml(c.last_message.slice(0,90)):'Aucun message'}</small></div><span class="status ${c.kind==='admin_seller'?'approved':'pending'}">${c.kind==='admin_seller'?'Admin':'Client'}</span></div></div>`).join('')}</div>`:'<div class="empty-state">Aucune conversation pour le moment.</div>';$$('[data-conversation]').forEach(b=>b.onclick=()=>openConversation(b.dataset.conversation,b.querySelector('b')?.textContent||'Conversation'))}catch(e){$('#chatInbox').innerHTML=`<div class="notice error">${escapeHtml(friendlyError(e))}</div>`}
+}
+
+openSellerDashboard=async function(){
+  if(!MPApi.token())return openLogin();
+  modal(`<span class="eyebrow">Ma boutique</span><h2>Tableau de bord vendeur</h2><div id="sellerState"><p class="muted">Chargement…</p></div>`);
+  try{
+    const [s,mine]=await Promise.all([MPApi.sellerMe(),MPApi.myProducts().catch(()=>[])]),status=String(s.status||'pending').toLowerCase(),approved=status==='approved';
+    const bname=s.store?.name||s.business_name||'Ma boutique',city=s.city||'',desc=s.store?.description||'';
+    $('#sellerState').innerHTML=`<div class="profile-hero"><div class="avatar-lg">${escapeHtml(bname.slice(0,2).toUpperCase())}</div><div><h2>${escapeHtml(bname)}</h2><p>${escapeHtml(city)}</p>${desc?`<small>${escapeHtml(desc)}</small>`:''}<div class="pills"><span class="pill">Vendeur</span><span class="status ${sellerStatusClass(status)}">${sellerStatusLabel(status)}</span></div>${hasRole('admin')?'<span class="owner-badge">★ Boutique propriétaire / administrateur</span>':''}</div></div><div class="admin-quick-grid"><button class="btn secondary" id="sellerEditShop">✎ Modifier ma boutique</button><button class="btn secondary" id="sellerInbox">💬 Messages clients / admin</button>${approved?'<button class="btn primary" id="sellerAddProduct">+ Ajouter un produit</button>':''}${hasRole('admin')?'<button class="btn secondary" id="sellerAdminAll">🛡 Administration complète</button>':''}</div>${!approved?`<div class="notice warn"><b>Boutique ${escapeHtml(sellerStatusLabel(status).toLowerCase())}.</b> ${status==='suspended'?'Tous ses produits sont retirés du Marché jusqu’à réactivation.':'La vente reste bloquée en attendant validation.'}</div>`:''}<h3 style="margin-top:18px">Produits de la boutique</h3><div class="seller-products">${mine.length?mine.map(p=>`<div class="seller-product-row"><div class="row-head"><div><b>${escapeHtml(p.name)}</b><small>${Number(p.price).toLocaleString('fr-FR')} ${escapeHtml(p.currency||'USD')} • Stock ${Number(p.stock_qty||0)}</small></div><span class="status ${moderationClass(p.moderation_status)}">${moderationLabel(p.moderation_status)}</span></div><div class="modal-actions"><button class="btn secondary" data-seller-edit-product="${p.id}">Modifier</button>${p.moderation_status==='pending'?'<span class="muted" style="align-self:center">En attente de validation admin</span>':''}</div></div>`).join(''):'<div class="empty-state">Aucun produit dans cette boutique.</div>'}</div>`;
+    $('#sellerEditShop').onclick=openEditMyShop;$('#sellerInbox').onclick=()=>openChatInbox(false);
+    if($('#sellerAddProduct'))$('#sellerAddProduct').onclick=openAddProduct;if($('#sellerAdminAll'))$('#sellerAdminAll').onclick=()=>openAdminCenter('sellers');
+    $$('[data-seller-edit-product]').forEach(b=>b.onclick=()=>openSellerEditProduct(mine.find(p=>String(p.id)===String(b.dataset.sellerEditProduct))));
+  }catch(e){$('#sellerState').innerHTML=`<div class="notice error">${escapeHtml(friendlyError(e))}</div>`}
+};
+
+function openSellerEditProduct(p){
+  if(!p)return;
+  modal(`<span class="eyebrow">Ma boutique</span><h2>Modifier le produit</h2><div class="notice">Toute modification du contenu repasse le produit en <b>validation administrateur</b>.</div><label>Nom<input id="sepName" value="${escapeHtml(p.name||'')}"></label><label>Description<textarea id="sepDesc">${escapeHtml(p.description||'')}</textarea></label><label>Catégorie<input id="sepCat" value="${escapeHtml(p.category||'')}"></label><div class="form-grid-2"><label>Prix<input id="sepPrice" type="number" step="0.01" min="0.01" value="${Number(p.price||0)}"></label><label>Devise<select id="sepCur"><option ${p.currency==='USD'?'selected':''}>USD</option><option ${p.currency==='CDF'?'selected':''}>CDF</option></select></label></div><label>Stock<input id="sepStock" type="number" min="0" value="${Number(p.stock_qty||0)}"></label><button class="btn primary full" id="sepSave">Enregistrer et soumettre</button><button class="btn secondary full" id="sepBack" style="margin-top:8px">Retour à ma boutique</button><p id="sepMsg"></p>`);
+  $('#sepBack').onclick=openSellerDashboard;$('#sepSave').onclick=async()=>{const b=$('#sepSave');b.disabled=true;try{await MPApi.updateProduct(p.id,{name:$('#sepName').value.trim(),description:$('#sepDesc').value.trim(),category:$('#sepCat').value.trim(),price:Number($('#sepPrice').value),currency:$('#sepCur').value,stock_qty:Number($('#sepStock').value)});toast('Modifications envoyées pour validation ✓');openSellerDashboard()}catch(e){$('#sepMsg').textContent=friendlyError(e);b.disabled=false}};
+}
+
+openAddProduct=async function(){
+  if(!MPApi.token())return openLogin();let seller;try{seller=await MPApi.sellerMe()}catch(e){toast(friendlyError(e));return openSellerDashboard()}
+  if(String(seller?.status||'').toLowerCase()!=='approved'){toast('Votre boutique doit d’abord être approuvée.');return openSellerDashboard()}
+  modal(`<span class="eyebrow">Catalogue vendeur</span><h2>Soumettre un produit</h2><div class="notice"><b>Validation obligatoire.</b> Après l’envoi, l’administrateur vérifie et approuve le produit avant qu’il apparaisse dans le Marché.</div><div class="upload-zone"><b>📷 Photo du produit</b><p class="muted">Galerie, Photos ou Fichiers — la caméra n’est plus forcée.</p><input id="pImage" type="file" accept="image/jpeg,image/png,image/webp"><img id="pPreview" class="image-preview" alt="Aperçu"><small class="muted" id="pImageInfo">JPEG, PNG ou WebP.</small></div><label>Nom<input id="pName"></label><label>Description<textarea id="pDesc"></textarea></label><label>Catégorie<select id="pCat"><option>Élevage</option><option>Santé</option><option>Tech</option><option>Mode</option><option>Agriculture</option><option>Maison</option></select></label><div class="form-grid-2"><label>Prix<input id="pPrice" type="number" min="0.01" step="0.01"></label><label>Devise<select id="pCurrency"><option>USD</option><option>CDF</option></select></label></div><label>Stock<input id="pStock" type="number" min="0" value="1"></label><button class="btn primary full" id="pCreate">Soumettre pour validation</button><p id="pMsg"></p>`);
+  let selectedImage='',selectedFileName='produit.jpg';
+  $('#pImage').onchange=async e=>{const file=e.target.files?.[0];if(!file)return;selectedFileName=(file.name||'produit.jpg').replace(/\.[^.]+$/,'.jpg');$('#pImageInfo').textContent='Optimisation…';try{selectedImage=await compressImage(file);$('#pPreview').src=selectedImage;$('#pPreview').style.display='block';$('#pImageInfo').textContent=`${file.name} • prêt à envoyer`}catch(err){selectedImage='';$('#pImageInfo').textContent=friendlyError(err)}};
+  $('#pCreate').onclick=async()=>{const name=$('#pName').value.trim(),price=Number($('#pPrice').value),stock=Number($('#pStock').value);if(name.length<2)return $('#pMsg').textContent='Ajoutez le nom.';if(!Number.isFinite(price)||price<=0)return $('#pMsg').textContent='Prix invalide.';const b=$('#pCreate');b.disabled=true;b.textContent='Envoi…';try{let created=await MPApi.createProduct({name,description:$('#pDesc').value.trim(),category:$('#pCat').value,price,currency:$('#pCurrency').value,stock_qty:stock});if(selectedImage&&created?.id){b.textContent='Envoi photo…';await MPApi.uploadProductImage(created.id,dataUrlToBlob(selectedImage),selectedFileName)}$('#pMsg').innerHTML='<div class="notice success"><b>Produit soumis ✓</b><br>Il apparaîtra dans le Marché après approbation de l’administrateur.</div><button class="btn secondary full" id="backShop">Retour à ma boutique</button>';$('#backShop').onclick=openSellerDashboard;toast('Produit envoyé pour validation')}catch(e){$('#pMsg').innerHTML=`<div class="notice error">${escapeHtml(friendlyError(e))}</div>`;b.disabled=false;b.textContent='Soumettre pour validation'}};
+};
+
+async function openAdminCenter(tab='sellers'){
+  if(!hasRole('admin'))return toast('Accès administrateur requis.');
+  modal(`<span class="eyebrow">Administration M’MEDPREN</span><h2>Centre de contrôle</h2><div class="admin-tabs"><button class="btn ${tab==='sellers'?'active':'secondary'}" data-atab="sellers">Boutiques</button><button class="btn ${tab==='products'?'active':'secondary'}" data-atab="products">Produits</button><button class="btn ${tab==='ads'?'active':'secondary'}" data-atab="ads">Publicités</button><button class="btn ${tab==='chats'?'active':'secondary'}" data-atab="chats">Chats</button></div><div id="adminPanel"><p class="muted">Chargement…</p></div>`);
+  $$('[data-atab]').forEach(b=>b.onclick=()=>openAdminCenter(b.dataset.atab));
+  try{
+    if(tab==='sellers')return renderAdminSellers();
+    if(tab==='products')return renderAdminProducts();
+    if(tab==='ads')return renderAdminAds();
+    if(tab==='chats')return renderAdminChats();
+  }catch(e){if($('#adminPanel'))$('#adminPanel').innerHTML=`<div class="notice error">${escapeHtml(friendlyError(e))}</div>`}
+}
+openAdminSellers=function(){return openAdminCenter('sellers')};
+
+async function renderAdminSellers(){
+  const [summary,rows]=await Promise.all([MPApi.adminDashboard(),MPApi.adminSellers()]);
+  $('#adminPanel').innerHTML=`<div class="stats"><div class="stat"><span>Vendeurs</span><b>${summary.sellers||0}</b></div><div class="stat"><span>En attente</span><b>${summary.pending_sellers||0}</b></div><div class="stat"><span>Suspendus</span><b>${summary.suspended_sellers||0}</b></div><div class="stat"><span>Produits à valider</span><b>${summary.pending_products||0}</b></div></div><h3 style="margin-top:18px">Boutiques / vendeurs</h3>${rows.length?rows.map(x=>`<div class="admin-seller-row"><div class="row-head"><div><b>${escapeHtml(x.store_name||x.business_name)}</b><small>${escapeHtml(x.city||'')} • ${Number(x.products_count||0)} produit(s)${/poules élevage/i.test(x.store_name||x.business_name||'')?' • Boutique initiale':''}</small></div><span class="status ${sellerStatusClass(x.status)}">${sellerStatusLabel(x.status)}</span></div><div class="modal-actions"><button class="btn primary" data-aapprove="${x.id}">Approuver / réactiver</button><button class="btn secondary" data-asuspend="${x.id}">Suspendre</button><button class="btn secondary" data-aedit="${x.id}">Modifier boutique</button><button class="btn secondary" data-achat="${x.id}">💬 Message vendeur</button><button class="btn danger" data-adelete="${x.id}">Supprimer définitivement</button></div></div>`).join(''):'<div class="empty-state">Aucun vendeur.</div>'}`;
+  $$('[data-aapprove]').forEach(b=>b.onclick=async()=>{await MPApi.adminSellerDecision(b.dataset.aapprove,'approved');toast('Boutique active ✓');openAdminCenter('sellers')});
+  $$('[data-asuspend]').forEach(b=>b.onclick=async()=>{await MPApi.adminSellerDecision(b.dataset.asuspend,'suspended');await hydrateProductsFromApi();toast('Boutique et produits suspendus');openAdminCenter('sellers')});
+  $$('[data-aedit]').forEach(b=>b.onclick=()=>openAdminEditSeller(b.dataset.aedit,rows.find(x=>String(x.id)===String(b.dataset.aedit))));
+  $$('[data-achat]').forEach(b=>{const s=rows.find(x=>String(x.id)===String(b.dataset.achat));b.onclick=()=>openAdminSellerChat(b.dataset.achat,s?.store_name||s?.business_name||'Vendeur')});
+  $$('[data-adelete]').forEach(b=>b.onclick=async()=>{if(!confirm('Supprimer définitivement ce vendeur, sa boutique et ses produits ?'))return;await MPApi.adminDeleteSeller(b.dataset.adelete);await hydrateProductsFromApi();toast('Vendeur supprimé');openAdminCenter('sellers')});
+}
+
+async function renderAdminProducts(){
+  const rows=await MPApi.adminProducts();
+  $('#adminPanel').innerHTML=`<div class="notice"><b>Validation des publications.</b> Les nouveaux produits et les produits modifiés restent invisibles dans le Marché jusqu’à votre approbation.</div><h3>Catalogue complet</h3>${rows.length?rows.map(p=>`<div class="admin-seller-row"><div class="row-head"><div><b>${escapeHtml(p.name)}</b><small>${escapeHtml(p.store_name||'Boutique')} • ${Number(p.price||0).toLocaleString('fr-FR')} ${escapeHtml(p.currency||'USD')} • Stock ${Number(p.stock_qty||0)}</small></div><span class="status ${moderationClass(p.moderation_status)}">${moderationLabel(p.moderation_status)}</span></div><div class="modal-actions"><button class="btn primary" data-papprove="${p.id}">✓ Approuver</button><button class="btn secondary" data-pedit="${p.id}">Modifier</button><button class="btn secondary" data-psuspend="${p.id}">Suspendre</button><button class="btn danger" data-pdelete="${p.id}">Supprimer</button></div></div>`).join(''):'<div class="empty-state">Aucun produit.</div>'}`;
+  $$('[data-papprove]').forEach(b=>b.onclick=async()=>{await MPApi.adminProductDecision(b.dataset.papprove,'approved');await hydrateProductsFromApi();toast('Produit publié ✓');openAdminCenter('products')});
+  $$('[data-psuspend]').forEach(b=>b.onclick=async()=>{await MPApi.adminProductDecision(b.dataset.psuspend,'suspended');await hydrateProductsFromApi();toast('Produit suspendu');openAdminCenter('products')});
+  $$('[data-pedit]').forEach(b=>b.onclick=()=>openAdminEditProduct(rows.find(p=>String(p.id)===String(b.dataset.pedit))));
+  $$('[data-pdelete]').forEach(b=>b.onclick=async()=>{if(!confirm('Supprimer définitivement ce produit ?'))return;await MPApi.adminDeleteProduct(b.dataset.pdelete);await hydrateProductsFromApi();toast('Produit supprimé');openAdminCenter('products')});
+}
+function openAdminEditProduct(p){
+  if(!p)return;
+  modal(`<span class="eyebrow">Administration</span><h2>Modifier le produit</h2><label>Nom<input id="aepName" value="${escapeHtml(p.name||'')}"></label><label>Description<textarea id="aepDesc">${escapeHtml(p.description||'')}</textarea></label><label>Catégorie<input id="aepCat" value="${escapeHtml(p.category||'')}"></label><div class="form-grid-2"><label>Prix<input id="aepPrice" type="number" step="0.01" value="${Number(p.price||0)}"></label><label>Devise<select id="aepCur"><option ${p.currency==='USD'?'selected':''}>USD</option><option ${p.currency==='CDF'?'selected':''}>CDF</option></select></label></div><label>Stock<input id="aepStock" type="number" min="0" value="${Number(p.stock_qty||0)}"></label><button class="btn primary full" id="aepSaveApprove">Enregistrer puis approuver</button><button class="btn secondary full" id="aepSave" style="margin-top:8px">Enregistrer sans changer le statut</button><button class="btn secondary full" id="aepBack" style="margin-top:8px">Retour</button><p id="aepMsg"></p>`);
+  const body=()=>({name:$('#aepName').value.trim(),description:$('#aepDesc').value.trim(),category:$('#aepCat').value.trim(),price:Number($('#aepPrice').value),currency:$('#aepCur').value,stock_qty:Number($('#aepStock').value)});
+  $('#aepBack').onclick=()=>openAdminCenter('products');$('#aepSave').onclick=async()=>{try{await MPApi.adminUpdateProduct(p.id,body());toast('Produit modifié ✓');openAdminCenter('products')}catch(e){$('#aepMsg').textContent=friendlyError(e)}};$('#aepSaveApprove').onclick=async()=>{try{await MPApi.adminUpdateProduct(p.id,body());await MPApi.adminProductDecision(p.id,'approved');await hydrateProductsFromApi();toast('Produit modifié et approuvé ✓');openAdminCenter('products')}catch(e){$('#aepMsg').textContent=friendlyError(e)}};
+}
+
+async function renderAdminAds(){
+  const rows=await MPApi.adminAds();
+  $('#adminPanel').innerHTML=`<button class="btn primary full" id="newAd">+ Nouvelle publicité</button><p class="muted">Les publicités actives apparaissent dans une bannière sur l’accueil. Vous contrôlez le texte, l’image, le lien et l’activation.</p>${rows.length?rows.map(a=>`<div class="admin-seller-row"><div class="row-head"><div style="display:flex;gap:10px;align-items:center">${a.image_url?`<img class="ad-thumb" src="${escapeHtml(a.image_url)}">`:''}<div><b>${escapeHtml(a.title)}</b><small>${escapeHtml(a.body||'')} • ${a.is_active?'Active':'Masquée'}</small></div></div><span class="status ${a.is_active?'approved':'suspended'}">${a.is_active?'Active':'Masquée'}</span></div><div class="modal-actions"><button class="btn secondary" data-adedit="${a.id}">Modifier</button><button class="btn ${a.is_active?'secondary':'primary'}" data-adtoggle="${a.id}" data-active="${a.is_active?'1':'0'}">${a.is_active?'Masquer':'Activer'}</button><button class="btn danger" data-addelete="${a.id}">Supprimer</button></div></div>`).join(''):'<div class="empty-state" style="margin-top:12px">Aucune publicité gérée pour le moment.</div>'}`;
+  $('#newAd').onclick=()=>openAdEditor();$$('[data-adedit]').forEach(b=>b.onclick=()=>openAdEditor(rows.find(a=>String(a.id)===String(b.dataset.adedit))));$$('[data-adtoggle]').forEach(b=>b.onclick=async()=>{await MPApi.adminUpdateAd(b.dataset.adtoggle,{is_active:b.dataset.active!=='1'});toast('Publicité mise à jour');openAdminCenter('ads');if(current==='home')mountManagedAds()});$$('[data-addelete]').forEach(b=>b.onclick=async()=>{if(!confirm('Supprimer cette publicité ?'))return;await MPApi.adminDeleteAd(b.dataset.addelete);toast('Publicité supprimée');openAdminCenter('ads')});
+}
+function openAdEditor(ad=null){
+  modal(`<span class="eyebrow">Publicités M’MEDPREN</span><h2>${ad?'Modifier':'Créer'} une publicité</h2><label>Titre<input id="adTitle" value="${escapeHtml(ad?.title||'')}"></label><label>Message<textarea id="adBody">${escapeHtml(ad?.body||'')}</textarea></label><label>Lien (optionnel)<input id="adLink" value="${escapeHtml(ad?.link_url||'')}" placeholder="https://..."></label><label>Ordre d’affichage<input id="adOrder" type="number" value="${Number(ad?.sort_order||0)}"></label><div class="upload-zone"><b>Image bannière</b><input id="adImage" type="file" accept="image/jpeg,image/png,image/webp"><img id="adPreview" class="image-preview" style="${ad?.image_url?'display:block':''}" src="${escapeHtml(ad?.image_url||'')}"></div><label style="display:flex;gap:8px;align-items:center"><input id="adActive" type="checkbox" ${ad?.is_active===false?'':'checked'} style="width:auto"> Publicité active</label><button class="btn primary full" id="adSave">Enregistrer</button><button class="btn secondary full" id="adBack" style="margin-top:8px">Retour</button><p id="adMsg"></p>`);
+  let selected='';$('#adImage').onchange=async e=>{const f=e.target.files?.[0];if(!f)return;try{selected=await compressImage(f,1600,.82);$('#adPreview').src=selected;$('#adPreview').style.display='block'}catch(err){$('#adMsg').textContent=friendlyError(err)}};$('#adBack').onclick=()=>openAdminCenter('ads');$('#adSave').onclick=async()=>{const body={title:$('#adTitle').value.trim(),body:$('#adBody').value.trim()||null,link_url:$('#adLink').value.trim()||null,is_active:$('#adActive').checked,sort_order:Number($('#adOrder').value||0)};if(body.title.length<2)return $('#adMsg').textContent='Ajoutez un titre.';const b=$('#adSave');b.disabled=true;try{let saved=ad?await MPApi.adminUpdateAd(ad.id,body):await MPApi.adminCreateAd(body);if(selected){b.textContent='Envoi image…';saved=await MPApi.adminUploadAdImage(saved.id,dataUrlToBlob(selected),'publicite.jpg')}toast('Publicité enregistrée ✓');openAdminCenter('ads')}catch(e){$('#adMsg').textContent=friendlyError(e);b.disabled=false;b.textContent='Enregistrer'}};
+}
+
+async function renderAdminChats(){
+  const rows=await MPApi.adminChats();
+  $('#adminPanel').innerHTML=`<div class="notice"><b>Supervision messagerie.</b> L’administrateur peut voir les conversations client ↔ vendeur et les échanges administration ↔ vendeur.</div>${rows.length?`<div class="chat-list" style="margin-top:12px">${rows.map(c=>`<div class="chat-row" data-admin-conv="${c.id}"><div class="row-head"><div><b>${escapeHtml(c.kind==='admin_seller'?`Administration ↔ ${c.seller_name}`:`${c.customer_name||'Client'} ↔ ${c.seller_name}`)}</b><small>${escapeHtml(c.last_message||c.subject||'Aucun message')}</small></div><span class="status ${c.kind==='admin_seller'?'approved':'pending'}">${c.kind==='admin_seller'?'Admin':'Client'}</span></div></div>`).join('')}</div>`:'<div class="empty-state">Aucun chat.</div>'}`;$$('[data-admin-conv]').forEach(b=>b.onclick=()=>openConversation(b.dataset.adminConv,b.querySelector('b')?.textContent||'Conversation'));
+}
+
+// enrich profile admin wording and force a fresh V3.4 render
+const _profileV34=profile;
+profile=function(){return _profileV34().replace('Valider, suspendre et gérer vendeurs & produits','Boutiques, produits, publicités et tous les chats')};
+render();
+</script>
+
 </body>
 </html>
