@@ -1,5 +1,5 @@
-const CACHE_NAME = 'mmedpren-v4-1-20260914';
-const APP_SHELL = ['./', './index.html', './manifest.webmanifest'];
+const CACHE_NAME = 'mmedpren-v4-2-20260914';
+const APP_SHELL = ['./', './index.html', './manifest.webmanifest', './icon-192.png', './icon-512.png', './apple-touch-icon.png', './og-mmedpren.png'];
 
 self.addEventListener('install', event => {
   event.waitUntil(caches.open(CACHE_NAME).then(cache => cache.addAll(APP_SHELL)).catch(() => null));
@@ -43,7 +43,9 @@ self.addEventListener('push', event => {
     body: data.body || 'Nouvelle activité sur M’MEDPREN',
     data: { url: data.url || './', entity_type: data.entity_type || null, entity_id: data.entity_id || null },
     tag: data.entity_id ? `${data.entity_type || 'activity'}-${data.entity_id}` : 'mmedpren-activity',
-    renotify: true
+    renotify: true,
+    icon: './icon-192.png',
+    badge: './icon-192.png'
   };
   event.waitUntil(self.registration.showNotification(title, options));
 });
