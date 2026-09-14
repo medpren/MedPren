@@ -4,6 +4,7 @@
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
   <meta name="theme-color" content="#F7934A"/>
+  <script>(function(){try{var t=localStorage.getItem('mmedpren-theme')||'light';document.documentElement.dataset.theme=t;}catch(e){}})();</script>
   <meta name="description" content="M'MEDPREN — acheter, vendre, trouver du travail, développer son activité et créer de l'impact."/>
   
   <link rel="icon" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyMjAgMjIwIiByb2xlPSJpbWciIGFyaWEtbGFiZWw9Ik0nTWVkUHJlbiI+CiAgPGcgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjRjc5MzRBIiBzdHJva2Utd2lkdGg9IjgiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCI+CiAgICA8cGF0aCBkPSJNNzggNTFjLTE3IDEtMjkgMTMtMjkgMjkgMCA5IDQgMTcgMTEgMjMtNSA3LTcgMTUtNSAyNCAzIDEyIDE0IDIxIDI3IDIyIDUgMTMgMTYgMjEgMjggMjEgMTIgMCAyNC04IDI5LTIxIDEzLTEgMjQtMTAgMjctMjIgMi05IDAtMTctNS0yNCA3LTYgMTEtMTQgMTEtMjMgMC0xNi0xMi0yOC0yOS0yOS02LTktMTYtMTUtMjctMTUtMTEgMC0yMSA2LTI3IDE1LTMtMS03LTEtMTEgMFoiLz4KICAgIDxwYXRoIGQ9Ik0xMTAgNDF2MTEyTTg4IDU3Yy03IDctOCAxNi0zIDI0TTEzMiA1N2M3IDcgOCAxNiAzIDI0TTc1IDg3YzEwIDEgMTYgNyAxNyAxNk0xNDUgODdjLTEwIDEtMTYgNy0xNyAxNk03NyAxMjNjOC02IDE3LTYgMjUgME0xNDMgMTIzYy04LTYtMTctNi0yNSAwTTkwIDE0M2M1LTYgMTItOSAyMC05TTEzMCAxNDNjLTUtNi0xMi05LTIwLTkiLz4KICAgIDxwYXRoIGQ9Ik04MCAxNTRjNiAxMCAxMyAyMCAxNyAzMmgyNmM0LTEyIDExLTIyIDE3LTMyIi8+CiAgICA8cGF0aCBkPSJNOTQgMTg3aDMyTTk3IDE5OGgyNk0xMDIgMjA5aDE2Ii8+CiAgICA8cGF0aCBkPSJNMTEwIDE1di0xM001NSAzMSA0NiAyME0xNjUgMzFsOS0xMU0yNiA4MEgxME0xOTQgODBoMTZNMzggMTMybC0xMyA3TTE4MiAxMzJsMTMgN001OCAxNjVsLTkgMTFNMTYyIDE2NWw5IDExIi8+CiAgPC9nPgo8L3N2Zz4K" type="image/svg+xml"/>
@@ -147,6 +148,7 @@ const MPApi = {
     return this.request('/products'+(p.toString()?`?${p}`:''));
   },
   product(id){ return this.request(`/products/${id}`); },
+  requestLogin(identifier){ return this.request('/auth/login/request',{method:'POST',body:JSON.stringify({identifier})}); },
   requestOtp(phone){ return this.request('/auth/otp/request',{method:'POST',body:JSON.stringify({phone})}); },
   async verifyOtp(challenge_id,code){ const d=await this.request('/auth/otp/verify',{method:'POST',body:JSON.stringify({challenge_id,code})}); localStorage.setItem('mmedpren-token',d.access_token); return d; },
   me(){ return this.request('/auth/me'); },
@@ -340,7 +342,7 @@ function bindDynamic(){
   if($('#profileSeller')) $('#profileSeller').onclick=()=>hasRole('seller')?openSellerDashboard():openSellerApplication();
   if($('#profileWork')) $('#profileWork').onclick=openProfessionalProfile;
   if($('#profileAdmin')) $('#profileAdmin').onclick=openAdminSellers;
-  if($('#logoutBtn')) $('#logoutBtn').onclick=()=>{MPApi.logout();apiUser=null;toast('Vous êtes déconnecté.');render()};
+  if($('#logoutBtn')) $('#logoutBtn').onclick=()=>{MPApi.logout();apiUser=null;sessionStorage.removeItem('mmedpren-guest');toast('Vous êtes déconnecté.');render();setTimeout(()=>window.showAuthGatewayV41?.(),80)};
 }
 
 function bindProductCardActions(){
@@ -1366,5 +1368,99 @@ openWorkTrainingEditor=function(t=null){
 async function handleSharedDeepLinkV40(){const q=new URLSearchParams(location.search),kind=q.get('share'),id=q.get('id');if(!kind||!id)return;try{if(kind==='product')await openProductPreviewV40(id);else if(kind==='opportunity')await openWorkPreviewV40(id);else if(kind==='training')await openTrainingPreviewV40(id);else if(kind==='profile')await openPublicProfilePreviewV40(id)}catch(e){toast(friendlyError(e))}}
 setTimeout(handleSharedDeepLinkV40,700);
 </script>
+
+
+<style id="v41-theme-auth-styles">
+/* M'MEDPREN V4.1 — thème clair/sombre + nouvelle porte d'entrée */
+html[data-theme="dark"]{color-scheme:dark;--ink:#F6F7F9;--text:#E7EAF0;--muted:#A6ADB7;--line:#343A43;--bg:#0F1216;--white:#171B20;--peach-2:#2A211B;--shadow:0 18px 48px rgba(0,0,0,.36)}
+html[data-theme="dark"] body{background:#0F1216;color:var(--text)}
+html[data-theme="dark"] .sidebar,
+html[data-theme="dark"] .topbar,
+html[data-theme="dark"] .bottom-nav,
+html[data-theme="dark"] .modal-card,
+html[data-theme="dark"] .assistant-panel,
+html[data-theme="dark"] .search-global,
+html[data-theme="dark"] .product-card,
+html[data-theme="dark"] .info-card,
+html[data-theme="dark"] .feature-card,
+html[data-theme="dark"] .stat,
+html[data-theme="dark"] .admin-seller-row,
+html[data-theme="dark"] .admin-user-row,
+html[data-theme="dark"] .work-card,
+html[data-theme="dark"] .work-training-card,
+html[data-theme="dark"] .work-opportunity-card,
+html[data-theme="dark"] .checkout-summary,
+html[data-theme="dark"] .list-row,
+html[data-theme="dark"] .side-impact,
+html[data-theme="dark"] .notice,
+html[data-theme="dark"] .empty-state,
+html[data-theme="dark"] .chat-thread,
+html[data-theme="dark"] .chat-message,
+html[data-theme="dark"] [class*="-card"]{background:#171B20!important;border-color:#343A43!important;color:#E7EAF0}
+html[data-theme="dark"] .topbar{background:rgba(15,18,22,.94)!important;border-color:#2B3037!important}
+html[data-theme="dark"] .sidebar{border-color:#2B3037!important}
+html[data-theme="dark"] .bottom-nav{border-color:#2B3037!important}
+html[data-theme="dark"] input,
+html[data-theme="dark"] textarea,
+html[data-theme="dark"] select{background:#11151A!important;color:#F5F7FA!important;border-color:#3B424C!important}
+html[data-theme="dark"] input::placeholder,html[data-theme="dark"] textarea::placeholder{color:#7F8894}
+html[data-theme="dark"] h1,html[data-theme="dark"] h2,html[data-theme="dark"] h3,html[data-theme="dark"] h4,html[data-theme="dark"] b,html[data-theme="dark"] strong{color:#F6F7F9}
+html[data-theme="dark"] .muted,html[data-theme="dark"] small{color:#A6ADB7}
+html[data-theme="dark"] .btn.secondary,html[data-theme="dark"] .round,html[data-theme="dark"] .profile-btn,html[data-theme="dark"] .modal-x{background:#20252C!important;color:#F3F5F8!important;border-color:#3A414B!important}
+html[data-theme="dark"] .nav-btn{color:#C3C9D1}
+html[data-theme="dark"] .nav-btn .nav-icon{background:#20252C;color:#C9CFD6}
+html[data-theme="dark"] .nav-btn.active{background:#34261D;color:#FF9F59}
+html[data-theme="dark"] .side-impact{background:linear-gradient(145deg,#171B20,#211A16)!important}
+html[data-theme="dark"] .scrim{background:rgba(0,0,0,.68)}
+html[data-theme="dark"] img{filter:none}
+.theme-toggle-v41{display:inline-flex!important;align-items:center;justify-content:center}
+
+.auth-gate-v41{position:fixed;inset:0;z-index:9999;background:#FBFBFC;display:none;overflow:auto;color:#18202D}
+.auth-gate-v41.show{display:block}
+.auth-shell-v41{min-height:100dvh;display:grid;grid-template-columns:minmax(0,1.05fr) minmax(420px,.95fr)}
+.auth-visual-v41{position:relative;overflow:hidden;padding:50px;display:flex;flex-direction:column;justify-content:space-between;background:linear-gradient(145deg,#FFF4E9 0%,#FFF 56%,#FFE2C9 100%)}
+.auth-visual-v41:before,.auth-visual-v41:after{content:"";position:absolute;border-radius:50%;filter:blur(2px);pointer-events:none}.auth-visual-v41:before{width:360px;height:360px;background:rgba(247,147,74,.18);right:-90px;top:18%}.auth-visual-v41:after{width:250px;height:250px;background:rgba(255,107,26,.13);left:-70px;bottom:8%}
+.auth-brand-v41{position:relative;z-index:2;display:flex;align-items:center;gap:13px}.auth-brand-mark-v41{width:52px;height:52px;border-radius:17px;background:linear-gradient(145deg,#FF9D59,#FF6818);color:white;display:grid;place-items:center;font-size:26px;box-shadow:0 14px 30px rgba(247,147,74,.25)}.auth-brand-v41 b{font-size:24px;letter-spacing:-.03em}.auth-brand-v41 small{display:block;color:#7B8088;margin-top:1px}
+.auth-message-v41{position:relative;z-index:2;max-width:580px}.auth-message-v41 .eyebrow-v41{font-size:11px;letter-spacing:.18em;color:#F06A18;font-weight:900}.auth-message-v41 h1{font-size:clamp(42px,5vw,76px);line-height:.98;letter-spacing:-.055em;margin:15px 0 20px;color:#171A1F}.auth-message-v41 p{font-size:18px;color:#676F78;max-width:540px}.auth-pills-v41{display:flex;flex-wrap:wrap;gap:9px;margin-top:26px}.auth-pills-v41 span{padding:9px 12px;border-radius:999px;background:rgba(255,255,255,.72);border:1px solid rgba(247,147,74,.18);font-size:12px;font-weight:750}
+.auth-form-side-v41{display:flex;align-items:center;justify-content:center;padding:34px;background:#fff;position:relative}.auth-card-v41{width:min(560px,100%);padding:28px 20px}.auth-top-actions-v41{position:absolute;top:22px;right:22px;display:flex;gap:8px}.auth-icon-btn-v41{width:43px;height:43px;border-radius:13px;border:1px solid #E3E5E8;background:#fff;font-weight:800;color:#353B43}.auth-card-v41 h2{font-size:38px;letter-spacing:-.035em;margin:0 0 8px;color:#18202D}.auth-card-v41>p{color:#707782;font-size:16px;margin:0 0 28px}.auth-field-v41{margin:16px 0}.auth-field-v41 label{display:block;font-size:12px;font-weight:800;color:#59616C;margin:0 0 7px}.auth-input-wrap-v41{height:60px;border:2px solid #E0E3E7;border-radius:17px;display:flex;align-items:center;gap:12px;padding:0 16px;background:#fff;transition:.2s}.auth-input-wrap-v41:focus-within{border-color:#F7934A;box-shadow:0 0 0 4px rgba(247,147,74,.12)}.auth-input-wrap-v41 span{font-size:22px}.auth-input-wrap-v41 input{border:0!important;outline:0!important;background:transparent!important;box-shadow:none!important;padding:0!important;font-size:16px;flex:1;color:#1F2630!important}.auth-primary-v41{width:100%;height:58px;border:0;border-radius:15px;background:linear-gradient(100deg,#F7934A,#FF6B1A);color:#fff;font-weight:850;font-size:16px;box-shadow:0 14px 30px rgba(247,147,74,.2)}.auth-secondary-v41{width:100%;height:54px;border-radius:15px;border:1px solid #DDE1E6;background:#fff;color:#27303A;font-weight:780}.auth-divider-v41{display:flex;align-items:center;gap:12px;color:#9AA0A8;margin:22px 0}.auth-divider-v41:before,.auth-divider-v41:after{content:"";height:1px;background:#E5E7EA;flex:1}.auth-small-v41{text-align:center;color:#727A84;font-size:14px;margin-top:22px}.auth-link-v41{border:0;background:transparent;color:#F06A18;font-weight:850;padding:3px}.auth-status-v41{min-height:22px;color:#707782;font-size:13px;margin:12px 0}.auth-status-v41.error{color:#B42318}.auth-dev-code-v41{background:#FFF4EA;border:1px solid #FFD4B1;border-radius:13px;padding:10px 12px;color:#814214;margin-top:9px}.auth-install-v41{position:fixed;right:22px;bottom:22px;z-index:10000;border:0;border-radius:13px;background:#20242A;color:#fff;padding:12px 16px;font-weight:800;box-shadow:0 12px 28px rgba(0,0,0,.18)}
+html[data-theme="dark"] .auth-gate-v41{background:#0F1216;color:#EEF1F5}
+html[data-theme="dark"] .auth-visual-v41{background:linear-gradient(145deg,#241A14 0%,#12161B 56%,#211813 100%)}
+html[data-theme="dark"] .auth-message-v41 h1,html[data-theme="dark"] .auth-brand-v41 b,html[data-theme="dark"] .auth-card-v41 h2{color:#F7F8FA}
+html[data-theme="dark"] .auth-message-v41 p,html[data-theme="dark"] .auth-brand-v41 small,html[data-theme="dark"] .auth-card-v41>p,html[data-theme="dark"] .auth-small-v41{color:#A7AFB9}
+html[data-theme="dark"] .auth-pills-v41 span{background:rgba(26,31,37,.72);border-color:#3A3029;color:#E8EBEF}
+html[data-theme="dark"] .auth-form-side-v41{background:#11151A}
+html[data-theme="dark"] .auth-icon-btn-v41,html[data-theme="dark"] .auth-secondary-v41{background:#1B2026;color:#F1F3F6;border-color:#363D46}
+html[data-theme="dark"] .auth-input-wrap-v41{background:#14191F;border-color:#3A414B}
+html[data-theme="dark"] .auth-input-wrap-v41 input{color:#F5F7FA!important}
+html[data-theme="dark"] .auth-divider-v41:before,html[data-theme="dark"] .auth-divider-v41:after{background:#343A43}
+html[data-theme="dark"] .auth-dev-code-v41{background:#2A211B;border-color:#5B3B27;color:#FFD2B0}
+@media(max-width:860px){.auth-shell-v41{display:block}.auth-visual-v41{min-height:235px;padding:26px 22px}.auth-message-v41{margin-top:42px}.auth-message-v41 h1{font-size:40px;margin-bottom:12px}.auth-message-v41 p{font-size:15px}.auth-pills-v41{display:none}.auth-form-side-v41{min-height:calc(100dvh - 235px);padding:24px 20px 90px}.auth-card-v41{padding:10px 0}.auth-card-v41 h2{font-size:33px}.auth-top-actions-v41{top:16px;right:16px}.auth-install-v41{right:14px;bottom:14px}}
+</style>
+<script id="v41-theme-auth-script">
+(function(){
+  MPApi.requestLogin=function(identifier){return this.request('/auth/login/request',{method:'POST',body:JSON.stringify({identifier})})};
+  function theme(){return localStorage.getItem('mmedpren-theme')||'light'}
+  function setTheme(t){t=t==='dark'?'dark':'light';localStorage.setItem('mmedpren-theme',t);document.documentElement.dataset.theme=t;const meta=document.querySelector('meta[name="theme-color"]');if(meta)meta.content=t==='dark'?'#0F1216':'#F7934A';document.querySelectorAll('[data-theme-toggle-v41]').forEach(b=>{b.textContent=t==='dark'?'☀':'☾';b.title=t==='dark'?'Passer en mode clair':'Passer en mode sombre'});}
+  function toggleTheme(){setTheme(theme()==='dark'?'light':'dark')}
+  window.setMmedprenTheme=setTheme;window.toggleMmedprenTheme=toggleTheme;setTheme(theme());
+
+  function hasShareDeepLink(){const q=new URLSearchParams(location.search);return !!(q.get('share')&&q.get('id'))}
+  function authMarkup(){return `<div class="auth-gate-v41" id="authGateV41" aria-label="Connexion M'MEDPREN"><div class="auth-shell-v41"><section class="auth-visual-v41"><div class="auth-brand-v41"><div class="auth-brand-mark-v41">M</div><div><b>M'MEDPREN</b><small>Marché • Work4Future • Business • Impact</small></div></div><div class="auth-message-v41"><span class="eyebrow-v41">VOTRE ÉCOSYSTÈME NUMÉRIQUE</span><h1>Vendre. Trouver. Apprendre. Grandir.</h1><p>Une seule plateforme pour accéder au marché, aux emplois, aux formations, aux services et aux opportunités de votre communauté.</p><div class="auth-pills-v41"><span>🛒 Marché</span><span>💼 Emplois</span><span>🎓 Formations</span><span>💬 Chat</span><span>🏪 Boutiques</span></div></div></section><section class="auth-form-side-v41"><div class="auth-top-actions-v41"><button class="auth-icon-btn-v41" data-theme-toggle-v41 type="button">${theme()==='dark'?'☀':'☾'}</button></div><div class="auth-card-v41"><h2 id="authTitleV41">Connexion</h2><p id="authIntroV41">Content de vous revoir ! Connectez-vous avec votre numéro de téléphone ou votre adresse e-mail.</p><div id="authLoginStepV41"><div class="auth-field-v41"><label id="authIdentifierLabelV41">Téléphone ou adresse e-mail</label><div class="auth-input-wrap-v41"><span>✉</span><input id="authIdentifierV41" autocomplete="username" placeholder="+243… ou nom@exemple.com"></div></div><button class="auth-primary-v41" id="authRequestV41">Recevoir mon code →</button></div><div id="authOtpStepV41" hidden><div class="auth-field-v41"><label>Code de vérification</label><div class="auth-input-wrap-v41"><span>🔐</span><input id="authCodeV41" inputmode="numeric" autocomplete="one-time-code" placeholder="000000"></div></div><button class="auth-primary-v41" id="authVerifyV41">Se connecter →</button><button class="auth-link-v41" id="authBackV41" type="button" style="margin-top:12px">← Modifier l'identifiant</button></div><div class="auth-status-v41" id="authStatusV41"></div><div id="authDebugV41"></div><div class="auth-divider-v41">ou</div><button class="auth-secondary-v41" id="authGuestV41" type="button">Continuer sans compte</button><div class="auth-small-v41">Pas encore de compte ? <button class="auth-link-v41" id="authSignupV41" type="button">Créer un compte</button></div></div></section></div><button class="auth-install-v41" id="authInstallV41" type="button">↓ Installer l'application</button></div>`}
+  function ensureGate(){if(document.getElementById('authGateV41'))return document.getElementById('authGateV41');document.body.insertAdjacentHTML('afterbegin',authMarkup());const gate=document.getElementById('authGateV41');gate.querySelectorAll('[data-theme-toggle-v41]').forEach(b=>b.onclick=toggleTheme);document.getElementById('authGuestV41').onclick=()=>{sessionStorage.setItem('mmedpren-guest','1');gate.classList.remove('show')};document.getElementById('authSignupV41').onclick=()=>{document.getElementById('authTitleV41').textContent='Créer un compte';document.getElementById('authIntroV41').textContent='Entrez votre numéro de téléphone. Un code de vérification créera votre compte en toute sécurité.';document.getElementById('authIdentifierLabelV41').textContent='Numéro de téléphone';const i=document.getElementById('authIdentifierV41');i.value=i.value.includes('@')?'+243':(i.value||'+243');i.placeholder='+243…';i.inputMode='tel';document.getElementById('authSignupV41').textContent='Mode inscription';};document.getElementById('authBackV41').onclick=()=>{document.getElementById('authOtpStepV41').hidden=true;document.getElementById('authLoginStepV41').hidden=false;document.getElementById('authDebugV41').innerHTML='';document.getElementById('authStatusV41').textContent=''};document.getElementById('authInstallV41').onclick=()=>document.getElementById('installBtn')?.click();
+    document.getElementById('authRequestV41').onclick=async()=>{const status=document.getElementById('authStatusV41'),identifier=document.getElementById('authIdentifierV41').value.trim();if(!identifier){status.className='auth-status-v41 error';status.textContent='Entrez votre numéro de téléphone ou votre adresse e-mail.';return}status.className='auth-status-v41';status.textContent='Envoi du code…';try{const d=await MPApi.requestLogin(identifier);window.__mmedprenV41Challenge=d.challenge_id;document.getElementById('authLoginStepV41').hidden=true;document.getElementById('authOtpStepV41').hidden=false;status.textContent=`Code envoyé au numéro associé ${d.destination_hint||''}. Valable ${Math.max(1,Math.round((d.expires_in||300)/60))} minute(s).`;document.getElementById('authDebugV41').innerHTML=d.debug_code?`<div class="auth-dev-code-v41">Code développement : <b>${escapeHtml(d.debug_code)}</b></div>`:'';setTimeout(()=>document.getElementById('authCodeV41')?.focus(),80)}catch(e){status.className='auth-status-v41 error';status.textContent=friendlyError(e)}};
+    document.getElementById('authVerifyV41').onclick=async()=>{const status=document.getElementById('authStatusV41'),code=document.getElementById('authCodeV41').value.trim();if(!window.__mmedprenV41Challenge||!code)return;status.className='auth-status-v41';status.textContent='Connexion…';try{await MPApi.verifyOtp(window.__mmedprenV41Challenge,code);apiUser=await MPApi.me();sessionStorage.removeItem('mmedpren-guest');gate.classList.remove('show');renderNav();render();updateCartBadge();setTimeout(()=>refreshNotificationCount?.(false),0);toast('Connexion réussie ✓')}catch(e){status.className='auth-status-v41 error';status.textContent=friendlyError(e)}};return gate}
+  window.showAuthGatewayV41=function(){const gate=ensureGate();gate.classList.add('show');setTheme(theme())};window.hideAuthGatewayV41=function(){ensureGate().classList.remove('show')};
+
+  // Thème disponible partout dans l'application
+  const top=document.querySelector('.top-actions');if(top&&!document.getElementById('themeToggleV41')){const b=document.createElement('button');b.id='themeToggleV41';b.className='round theme-toggle-v41';b.type='button';b.setAttribute('data-theme-toggle-v41','');b.onclick=toggleTheme;top.insertBefore(b,top.firstChild);setTheme(theme())}
+
+  // La connexion ouverte depuis Mon compte accepte elle aussi e-mail OU téléphone.
+  window.openLogin=function(){modal(`<div class="login-brand"><h2>Connexion</h2><p>Utilisez votre numéro de téléphone ou votre adresse e-mail.</p></div><label>Téléphone ou adresse e-mail<input id="loginIdentifierV41" placeholder="+243… ou nom@exemple.com"></label><button class="btn primary full" id="requestLoginV41">Recevoir le code →</button><div id="authStep"></div><p id="authMsg" class="muted"></p>`);document.getElementById('requestLoginV41').onclick=async()=>{const msg=document.getElementById('authMsg');msg.textContent='Envoi…';try{const d=await MPApi.requestLogin(document.getElementById('loginIdentifierV41').value.trim());document.getElementById('requestLoginV41').style.display='none';document.getElementById('authStep').innerHTML=`${d.debug_code?`<div class="checkout-summary" style="margin-top:12px">Code développement : <b>${escapeHtml(d.debug_code)}</b></div>`:''}<p class="muted">Code envoyé au numéro associé ${escapeHtml(d.destination_hint||'')}.</p><label>Code OTP<input id="loginCode" inputmode="numeric" placeholder="000000"></label><button class="btn primary full" id="verifyOtpBtn">Se connecter</button>`;msg.textContent=`Code valable ${Math.max(1,Math.round((d.expires_in||300)/60))} minute(s).`;document.getElementById('verifyOtpBtn').onclick=async()=>{try{await MPApi.verifyOtp(d.challenge_id,document.getElementById('loginCode').value);apiUser=await MPApi.me();closeModal();toast('Connexion réussie ✓');go('profile')}catch(e){msg.textContent=friendlyError(e)}}}catch(e){msg.textContent=friendlyError(e)}}};
+
+  // Première visite : nouvelle page de connexion, sauf ouverture d'un lien public partagé.
+  setTimeout(()=>{if(!MPApi.token()&&!sessionStorage.getItem('mmedpren-guest')&&!hasShareDeepLink())showAuthGatewayV41()},60);
+})();
+</script>
+
 </body>
 </html>
